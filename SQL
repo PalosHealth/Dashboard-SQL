@@ -1,0 +1,100 @@
+with Consult (pat_enc_csn_id, department_id, prov_name, ordering_date, consult_count)
+as
+(select op.PAT_ENC_CSN_ID, de.DEPARTMENT_ID, s.PROV_NAME as "Ordering Prov", op.ORDERING_DATE, count(distinct op.order_proc_id)
+from order_proc op
+inner join order_proc_2 o
+on op.order_proc_id = o.order_proc_id
+left join clarity_ser sr
+on o.REFD_TO_PROV_ID = sr.prov_id
+inner join clarity_ser s
+on op.authrzing_prov_id = s.prov_id
+left join pat_enc_hsp peh
+on op.pat_enc_csn_id = peh.pat_enc_csn_id
+left join clarity_dep de
+on peh.department_id = de.department_id
+where op.ORDER_TYPE_C = '12'
+and authrzing_prov_id in ('33', '143', '174', '217', '277', '302', '315', '454', '505', '4382', '12769', '12770', '12771', '527', '303', '583', '300', '34', '291', '170', '409', '438', '485', '203', '301', '122', '273', '38', '39', '61', '141', '43')
+and ordering_date > '03-10-2016'
+GROUP BY op.PAT_ENC_CSN_ID, de.DEPARTMENT_ID, s.PROV_NAME, op.ORDERING_DATE
+),
+ 
+HospitalistCTE (prov_name, Hospitalist ,prov_id, pat_id, pat_enc_csn_id, pat_class, department_name ,hosp_admsn_time, hosp_disch_time, los, note_id, note_type, note_create_dttm, hour_hp, rownum, drg_weight, disch_sum_dttm, disch_sum_hrs)
+as
+(select  s.prov_name, 'Hospitalist' ,s.prov_id, peh.pat_id, peh.pat_enc_csn_id, z.NAME, dep.department_name,
+hosp_admsn_time, hosp_disch_time, datediff(hh, hosp_admsn_time, hosp_disch_time) as "LOS",
+h.note_id, znt.name, h.CREATE_INSTANT_DTTM, datediff(hh, peh.hosp_admsn_time, h.CREATE_INSTANT_DTTM) as "Hours H&P Created",
+row_number () over (partition by peh.pat_enc_csn_id order by h.create_instant_dttm asc) RowNum, ham.DRG_WEIGHT, hi.LST_FILED_INST_DTTM,
+datediff(hh, peh.hosp_disch_time, hi.lst_filed_inst_dttm)
+from pat_enc_hsp peh
+left join hsp_account ha
+on peh.PAT_ENC_CSN_ID = ha.PRIM_ENC_CSN_ID
+left join HSP_ACCT_MULT_DRGS ham
+on ha.HSP_ACCOUNT_ID = ham.HSP_ACCOUNT_ID
+left join ZC_PAT_CLASS z
+on peh.ADT_PAT_CLASS_C = z.ADT_PAT_CLASS_C
+left join clarity_dep dep
+on peh.department_id = dep.department_id
+inner join clarity_ser s
+on peh.admission_prov_id = s.prov_id
+left join HNO_INFO h
+on peh.pat_enc_csn_id = h.pat_enc_csn_id
+inner join ZC_NOTE_TYPE_IP znt
+on h.IP_NOTE_TYPE_C = znt.TYPE_IP_C
+left join hno_info hi
+on peh.PAT_ENC_CSN_ID = hi.PAT_ENC_CSN_ID
+where ADMISSION_PROV_ID in ('33', '143', '174', '217', '277', '302', '315', '454', '505', '4382', '12769', '12770', '12771')
+and hosp_admsn_time > '03-11-2016'
+and h.ip_note_type_c = '4'
+and hi.IP_NOTE_TYPE_C = '5'
+and ha.CODING_STATUS_C= '4'
+),
+ 
+EDonCall (prov_name, EDOnCall ,prov_id, pat_id, pat_enc_csn_id, pat_class, department_name ,hosp_admsn_time, hosp_disch_time, los, note_id, note_type, note_create_dttm, hour_hp, rownum, drg_weight, disch_sum_dttm, disch_sum_hrs)
+as
+(select  s.prov_name, 'ED On Call' ,s.prov_id, peh.pat_id, peh.pat_enc_csn_id, z.NAME, dep.department_name,
+hosp_admsn_time, hosp_disch_time, datediff(hh, hosp_admsn_time, hosp_disch_time) as "LOS",
+h.note_id, znt.name, h.CREATE_INSTANT_DTTM, datediff(hh, peh.hosp_admsn_time, h.CREATE_INSTANT_DTTM) as "Hours H&P Created",
+row_number () over (partition by peh.pat_enc_csn_id order by h.create_instant_dttm asc) RowNum, ham.DRG_WEIGHT, hi.LST_FILED_INST_DTTM,
+datediff(hh, peh.hosp_disch_time, hi.lst_filed_inst_dttm)
+from pat_enc_hsp peh
+left join hsp_account ha
+on peh.PAT_ENC_CSN_ID = ha.PRIM_ENC_CSN_ID
+left join HSP_ACCT_MULT_DRGS ham
+on ha.HSP_ACCOUNT_ID = ham.HSP_ACCOUNT_ID
+left join ZC_PAT_CLASS z
+on peh.ADT_PAT_CLASS_C = z.ADT_PAT_CLASS_C
+left join clarity_dep dep
+on peh.department_id = dep.department_id
+inner join clarity_ser s
+on peh.admission_prov_id = s.prov_id
+left join HNO_INFO h
+on peh.pat_enc_csn_id = h.pat_enc_csn_id
+inner join ZC_NOTE_TYPE_IP znt
+on h.IP_NOTE_TYPE_C = znt.TYPE_IP_C
+left join hno_info hi
+on peh.PAT_ENC_CSN_ID = hi.PAT_ENC_CSN_ID
+where ADMISSION_PROV_ID in ('527', '303', '583', '300', '34', '291', '170', '409', '438', '485', '203', '301', '122', '273', '38', '39', '61', '141', '43')
+and hosp_admsn_time > '03-11-2016'
+and h.ip_note_type_c = '4'
+and hi.IP_NOTE_TYPE_C = '5'
+and ha.CODING_STATUS_C= '4'
+)
+ 
+select h.*,
+CASE WHEN c.consult_count is null THEN 0
+ELSE c.consult_count end as CONSULT_COUNT
+from HospitalistCTE h
+left join Consult c
+on h.pat_enc_csn_id = c.pat_enc_csn_id
+where rownum = '1'
+ 
+union all
+ 
+select e.*,
+CASE WHEN co.consult_count is null THEN 0
+ELSE co.consult_count end as CONSULT_COUNT
+from EDonCall e
+left join Consult co
+on e.pat_enc_csn_id = co.pat_enc_csn_id
+where rownum = '1'
+ 
