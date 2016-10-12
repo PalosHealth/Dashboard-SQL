@@ -46,8 +46,7 @@ where ADMISSION_PROV_ID in ('33', '143', '174', '217', '277', '302', '315', '454
 and hosp_admsn_time > '03-11-2016'
 and h.ip_note_type_c = '4'
 and hi.IP_NOTE_TYPE_C = '5'
-and ha.CODING_STATUS_C= '4'
-),
+and ha.CODING_STATUS_C= '4'),
  
 EDonCall (prov_name, EDOnCall ,prov_id, pat_id, pat_enc_csn_id, pat_class, department_name ,hosp_admsn_time, hosp_disch_time, los, note_id, note_type, note_create_dttm, hour_hp, rownum, drg_weight, disch_sum_dttm, disch_sum_hrs)
 as
@@ -77,8 +76,7 @@ where ADMISSION_PROV_ID in ('527', '303', '583', '300', '34', '291', '170', '409
 and hosp_admsn_time > '03-11-2016'
 and h.ip_note_type_c = '4'
 and hi.IP_NOTE_TYPE_C = '5'
-and ha.CODING_STATUS_C= '4'
-)
+and ha.CODING_STATUS_C= '4')
  
 select h.*,
 CASE WHEN c.consult_count is null THEN 0
